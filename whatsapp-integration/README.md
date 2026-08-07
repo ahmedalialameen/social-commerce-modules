@@ -14,7 +14,6 @@ This module is designed to be fully self-contained, allowing you to easily drop 
   - `shipment_update`: Mapped to `['trackingStatus', 'estimatedDelivery']`
   - `payment_confirmed`: Mapped to `['amountConfirmed', 'orderId']`
 - **Extensible & Dynamically Customizable:** Support for custom template registration at runtime via `TemplateRegistry.registerTemplate(...)`.
-- **Automatic Fallback:** Unregistered templates fallback to alphabetical parameter sorting to maintain continuous API compatibility.
 - **Express.js Webhook Router:** Robust webhook receiver that supports Meta's `GET /webhook` handshake verification and captures status callback events (`sent`, `delivered`, `read`, `failed`) into a thread-safe, in-memory log list.
 - **Robust Error Handling:** Intercepts and parses Meta API error codes/subcodes and translates them into developer-friendly error messages.
 - **Full Test Suite:** 15 unit/integration tests with 100% mocked dependencies for safe testing.

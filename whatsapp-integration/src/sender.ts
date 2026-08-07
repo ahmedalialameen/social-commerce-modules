@@ -60,21 +60,20 @@ export async function sendWhatsAppMessage(
   const expectedKeys = TemplateRegistry.getTemplateKeys(templateName);
   let orderedParamValues: string[] = [];
 
-  if (expectedKeys) {
-    // Standard path: mapping keys sequentially using registered order
-    for (const key of expectedKeys) {
-      if (!(key in parameters)) {
-        throw new Error(
-          `Missing required parameter "${key}" for template "${templateName}". Expected parameters: ${expectedKeys.join(', ')}`
-        );
-      }
-      orderedParamValues.push(String(parameters[key]));
+  if (!expectedKeys) {
+    throw new Error(
+      `Template "${templateName}" is not registered in TemplateRegistry. Register it first using TemplateRegistry.registerTemplate() before sending.`
+    );
+  }
+
+  // Standard path: mapping keys sequentially using registered order
+  for (const key of expectedKeys) {
+    if (!(key in parameters)) {
+      throw new Error(
+        `Missing required parameter "${key}" for template "${templateName}". Expected parameters: ${expectedKeys.join(', ')}`
+      );
     }
-  } else {
-    // Fallback path: If template is not registered, sort parameters alphabetically by key.
-    // This allows working with custom/ad-hoc templates without registration.
-    const sortedKeys = Object.keys(parameters).sort();
-    orderedParamValues = sortedKeys.map((key) => String(parameters[key]));
+    orderedParamValues.push(String(parameters[key]));
   }
 
   // Build the Meta WhatsApp Cloud API template components structure

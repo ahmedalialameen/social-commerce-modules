@@ -160,26 +160,17 @@ describe('sendWhatsAppMessage', () => {
     TemplateRegistry.removeTemplate('welcome_offer');
   });
 
-  it('should fall back to alphabetical keys if the template is unregistered', async () => {
-    mockedAxios.post.mockResolvedValueOnce({
-      data: { messaging_product: 'whatsapp', messages: [{ id: 'msg-unreg-1' }] },
-    });
-
+  it('should throw an error if the template is unregistered', async () => {
     const params = {
       zebra: 'stripes',
       apple: 'fruit',
-      banana: 'yellow',
     };
 
-    await sendWhatsAppMessage('completely_unregistered_template', '12345', params);
-
-    const [, payload] = mockedAxios.post.mock.calls[0];
-    // Keys apple, banana, zebra should sort to fruit, yellow, stripes
-    expect((payload as any).template.components[0].parameters).toEqual([
-      { type: 'text', text: 'fruit' },
-      { type: 'text', text: 'yellow' },
-      { type: 'text', text: 'stripes' },
-    ]);
+    await expect(
+      sendWhatsAppMessage('completely_unregistered_template', '12345', params)
+    ).rejects.toThrow(
+      'Template "completely_unregistered_template" is not registered in TemplateRegistry. Register it first using TemplateRegistry.registerTemplate() before sending.'
+    );
   });
 
   it('should support dynamic configuration overrides', async () => {
