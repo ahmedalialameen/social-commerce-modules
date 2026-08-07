@@ -1,0 +1,11 @@
+whatsapp-integration/node_modules/
+whatsapp-integration/dist/
+whatsapp-integration/coverage/
+node_modules/
+dist/
+coverage/
+.env
+.env.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
