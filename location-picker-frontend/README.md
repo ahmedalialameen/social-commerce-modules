@@ -12,7 +12,8 @@ The frontend is loaded by the customer via a secure, single-use WhatsApp link, a
 - **Interactive Map:** Displays Google Maps. Allows customers to tap/click on the map or drag-and-drop the marker to specify their exact address.
 - **Browser Geolocation:** Includes a "Use My Current Location" button leveraging the native HTML5 Geolocation API to auto-center and place the pin instantly.
 - **Status Overlay System:** Intuitive UI messaging for API request states (Submitting loader, Success, Invalid Coordinates (400), Link Invalid (404), Link Expired (410), and Network Connectivity errors), rather than raw JSON/stack dumps.
-- **Smart Fallback/Demo Mode:** If loaded without a valid Google Maps API key, or without a `linkId` URL query parameter, it defaults to an interactive offline simulation/demo map, which can also be utilized for testing and local integration.
+- **Smart Fallback/Demo Mode:** If loaded without a configured Google Maps API key (i.e. left as `"REPLACE WITH YOUR API KEY"`), it enters a legitimate local demo mode with an interactive mock fallback map for offline testing and visual verification.
+- **Reliable Failure Detection (No Silent Fallback):** Real-world load failures (e.g., script load errors due to network drops, bad API keys, domain restrictions, or runtime exceptions) do *not* silently fall back to the mock map. Instead, they trigger a full-screen, non-dismissible load error state with a **Reload Page** button, preventing customers from placing or submitting inaccurate coordinates.
 
 ---
 

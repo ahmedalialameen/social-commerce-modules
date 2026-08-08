@@ -417,6 +417,8 @@
     let map = null;
     let marker = null;
     let selectedLocation = null; // { lat, lng }
+    let isDemoMode = false;
+    let isLoadError = false;
 
     // Grab elements
     const btnGeolocation = document.getElementById('btn-geolocation');
@@ -442,6 +444,7 @@
       // Check if API key is unconfigured placeholder
       if (GOOGLE_MAPS_API_KEY === "REPLACE WITH YOUR API KEY") {
         console.warn("Google Maps API key is not configured. Initializing simulated demo map fallback.");
+        isDemoMode = true;
         initMockMap();
       } else {
         loadGoogleMapsAPI();
@@ -455,8 +458,8 @@
       script.async = true;
       script.defer = true;
       script.onerror = () => {
-        console.error("Failed to load Google Maps script. Falling back to mock map.");
-        initMockMap();
+        console.error("Failed to load Google Maps script. Displaying load error screen.");
+        handleMapLoadError();
       };
       document.head.appendChild(script);
     }
@@ -495,8 +498,33 @@
 
       } catch (err) {
         console.error("Error initializing Google Map:", err);
-        initMockMap();
+        handleMapLoadError();
       }
+    }
+
+    function handleMapLoadError() {
+      isLoadError = true;
+      isDemoMode = false;
+
+      // Disable buttons and clear coordinate display
+      btnGeolocation.disabled = true;
+      btnConfirm.disabled = true;
+      coordsDisplay.textContent = "Map failed to load";
+
+      // Hide mock fallback if it is displayed
+      document.getElementById('map-fallback').style.display = 'none';
+
+      // Show non-dismissible error modal (no close/try again button besides reloading)
+      showModal(`
+        <div class="modal-icon modal-icon-error">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+          </svg>
+        </div>
+        <div class="modal-title">Map failed to load</div>
+        <div class="modal-message">Map failed to load. Please check your internet connection and reload the page, or contact the seller for help.</div>
+        <button class="btn btn-primary" onclick="window.location.reload()" style="margin-top: 16px;">Reload Page</button>
+      `);
     }
 
     function placeMarker(latLng) {
@@ -589,6 +617,8 @@
 
     // Geolocation API Action
     btnGeolocation.addEventListener('click', () => {
+      if (isLoadError) return;
+
       btnGeolocation.disabled = true;
       const originalText = btnGeolocation.innerHTML;
       btnGeolocation.innerHTML = `
@@ -604,6 +634,8 @@
 
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          if (isLoadError) return;
+
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
           const userLatLng = { lat, lng };
@@ -616,7 +648,7 @@
             map.setCenter(googleLatLng);
             map.setZoom(16);
             placeMarker(googleLatLng);
-          } else {
+          } else if (isDemoMode) {
             // Update mock marker position
             moveMockMarker(lat, lng);
           }
@@ -624,6 +656,8 @@
           resetGeoBtn();
         },
         (error) => {
+          if (isLoadError) return;
+
           console.error("Geolocation error:", error);
           let errMsg = "Unable to retrieve your location. Please select manually on the map.";
           if (error.code === error.PERMISSION_DENIED) {
@@ -636,6 +670,10 @@
       );
 
       function resetGeoBtn() {
+        if (isLoadError) {
+          btnGeolocation.disabled = true;
+          return;
+        }
         btnGeolocation.disabled = false;
         btnGeolocation.innerHTML = originalText;
       }
@@ -656,6 +694,7 @@
 
     // Confirm & Submit Location
     btnConfirm.addEventListener('click', () => {
+      if (isLoadError) return;
       if (!selectedLocation) return;
 
       // Show loading modal immediately
