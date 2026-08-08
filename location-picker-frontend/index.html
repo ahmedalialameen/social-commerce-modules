@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Confirm Your Delivery Location</title>
+  <style>
+    :root {
+      --primary-color: #1A73E8;
+      --primary-hover: #1557b0;
+      --success-color: #25D366;
+      --success-hover: #128C7E;
+      --error-color: #D93025;
+      --bg-color: #F8F9FA;
+      --text-color: #202124;
+      --text-muted: #5F6368;
+      --border-color: #DADCE0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Full screen container */
+    #app-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Map container */
+    #map {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      background-color: #E8EAED;
+      position: relative;
+    }
+
+    /* Fallback / Mock Map View */
+    #map-fallback {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle, #e2e8f0 0%, #cbd5e1 100%);
+      color: var(--text-muted);
+      text-align: center;
+      padding: 20px;
+      cursor: pointer;
+      z-index: 1;
+    }
+
+    #map-fallback .fallback-grid {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background-size: 40px 40px;
+      background-image:
+        linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px);
+      top: 0;
+      left: 0;
+      pointer-events: none;
+    }
+
+    #map-fallback .fallback-content {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 24px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+      max-width: 320px;
+      pointer-events: none;
+      border: 1px solid var(--border-color);
+      position: relative;
+      z-index: 2;
+    }
+
+    #map-fallback-marker {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23D93025"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>');
+      background-size: contain;
+      background-repeat: no-repeat;
+      transform: translate(-50%, -100%);
+      pointer-events: none;
+      display: none;
+      z-index: 3;
+      filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.3));
+    }
+
+    /* Top Banner Instructions */
+    .top-banner {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 32px);
+      max-width: 440px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 12px;
+      padding: 12px 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .top-banner svg {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      fill: var(--primary-color);
+    }
+
+    .top-banner-text {
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1.4;
+      color: var(--text-color);
+    }
+
+    /* Bottom Control Panel Card */
+    .bottom-card {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 32px);
+      max-width: 440px;
+      background: #FFFFFF;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      border: 1px solid var(--border-color);
+    }
+
+    .coordinate-display {
+      background-color: #F1F3F4;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-family: monospace;
+      color: var(--text-muted);
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .coordinate-display span {
+      font-weight: bold;
+      color: var(--text-color);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 20px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+      width: 100%;
+      outline: none;
+    }
+
+    .btn-secondary {
+      background-color: #FFFFFF;
+      color: var(--primary-color);
+      border: 1.5px solid var(--primary-color);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background-color: #F4F8FE;
+    }
+
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: #FFFFFF;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-primary:disabled {
+      background-color: var(--border-color);
+      color: #9AA0A6;
+      cursor: not-allowed;
+    }
+
+    /* Fullscreen Modal Overlays */
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.98);
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      text-align: center;
+      animation: fadeIn 0.3s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-card {
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .modal-icon {
+      width: 64px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      margin-bottom: 8px;
+    }
+
+    .modal-icon-success {
+      background-color: #E6F4EA;
+      fill: var(--success-color);
+    }
+
+    .modal-icon-error {
+      background-color: #FCE8E6;
+      fill: var(--error-color);
+    }
+
+    .modal-icon-warning {
+      background-color: #FEF7E0;
+      fill: #F4B400;
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-color);
+    }
+
+    .modal-message {
+      font-size: 15px;
+      line-height: 1.5;
+      color: var(--text-muted);
+    }
+
+    /* Loading Spinner */
+    .spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border-left-color: var(--primary-color);
+      animation: spin 1s linear infinite;
+      margin-bottom: 12px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Floating Warning (e.g. Missing Link ID) */
+    .warning-alert {
+      background-color: #FEF7E0;
+      border: 1px solid #F4B400;
+      border-radius: 12px;
+      padding: 12px 16px;
+      color: #B06000;
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.4;
+      display: none;
+      align-items: flex-start;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .warning-alert svg {
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      fill: #F4B400;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app-container">
+    <!-- Map Container -->
+    <div id="map"></div>
+
+    <!-- Fallback/Mock Map View if API fails/placeholder -->
+    <div id="map-fallback">
+      <div class="fallback-grid"></div>
+      <div class="fallback-content">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48" fill="#1A73E8" style="margin-bottom: 12px;">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+        </svg>
+        <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: var(--text-color);">Interactive Map Demo</h3>
+        <p style="font-size: 13px; line-height: 1.4;">Tap/click anywhere on this area to place a pin marker for your location.</p>
+      </div>
+      <div id="map-fallback-marker"></div>
+    </div>
+
+    <!-- Top Instructions Banner -->
+    <div class="top-banner">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+      </svg>
+      <div class="top-banner-text">
+        Tap on the map or drag the pin to mark your exact delivery address.
+      </div>
+    </div>
+
+    <!-- Bottom Action Card -->
+    <div class="bottom-card">
+      <div class="warning-alert" id="link-id-warning">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+        </svg>
+        <div>
+          <strong>Missing Link ID:</strong> This page is in test/preview mode. Submissions will be simulated.
+        </div>
+      </div>
+
+      <button id="btn-geolocation" class="btn btn-secondary">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+          <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h-2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
+        </svg>
+        Use My Current Location
+      </button>
+
+      <div class="coordinate-display" id="coords-display">
+        No location selected
+      </div>
+
+      <button id="btn-confirm" class="btn btn-primary" disabled>
+        Confirm Location
+      </button>
+    </div>
+
+    <!-- Status Screen / Modal Overlays -->
+    <div class="modal-overlay" id="status-modal">
+      <div class="modal-card" id="modal-content">
+        <!-- Will be dynamically updated -->
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ==========================================
+    // CONFIGURATION
+    // ==========================================
+    const GOOGLE_MAPS_API_KEY = "REPLACE WITH YOUR API KEY";
+    const API_BASE_URL = ""; // Empty string for relative calls, or absolute path like "http://localhost:3000"
+
+    // ==========================================
+    // CONSTANTS & STATE variables
+    // ==========================================
+    const DEFAULT_LAT = 15.5007;
+    const DEFAULT_LNG = 32.5599;
+
+    let map = null;
+    let marker = null;
+    let selectedLocation = null; // { lat, lng }
+
+    // Grab elements
+    const btnGeolocation = document.getElementById('btn-geolocation');
+    const btnConfirm = document.getElementById('btn-confirm');
+    const coordsDisplay = document.getElementById('coords-display');
+    const statusModal = document.getElementById('status-modal');
+    const modalContent = document.getElementById('modal-content');
+    const linkIdWarning = document.getElementById('link-id-warning');
+
+    // Get linkId from URL query string
+    const urlParams = new URLSearchParams(window.location.search);
+    const linkId = urlParams.get('linkId');
+
+    // Warn if missing linkId
+    if (!linkId) {
+      linkIdWarning.style.display = 'flex';
+    }
+
+    // ==========================================
+    // INITIALIZATION & SCRIPT LOADING
+    // ==========================================
+    window.addEventListener('load', () => {
+      // Check if API key is unconfigured placeholder
+      if (GOOGLE_MAPS_API_KEY === "REPLACE WITH YOUR API KEY") {
+        console.warn("Google Maps API key is not configured. Initializing simulated demo map fallback.");
+        initMockMap();
+      } else {
+        loadGoogleMapsAPI();
+      }
+    });
+
+    function loadGoogleMapsAPI() {
+      // Dynamic script loading with error handling
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&callback=initMap`;
+      script.async = true;
+      script.defer = true;
+      script.onerror = () => {
+        console.error("Failed to load Google Maps script. Falling back to mock map.");
+        initMockMap();
+      };
+      document.head.appendChild(script);
+    }
+
+    // ==========================================
+    // REAL GOOGLE MAP IMPLEMENTATION
+    // ==========================================
+    function initMap() {
+      try {
+        const mapOptions = {
+          center: { lat: DEFAULT_LAT, lng: DEFAULT_LNG },
+          zoom: 13,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+          gestureHandling: "greedy", // Easier map dragging on mobile
+          styles: [
+            {
+              featureType: "poi",
+              elementType: "labels",
+              stylers: [{ visibility: "off" }]
+            }
+          ]
+        };
+
+        map = new google.maps.Map(document.getElementById('map'), mapOptions);
+
+        // Place initial inactive or default marker if desired, but user requirements say:
+        // "Confirm Location button is disabled until a pin has been placed"
+        // So we do not place a pin on load, forcing user interaction or geolocation first.
+
+        // Listen for map click/tap to place/move marker
+        map.addListener('click', (event) => {
+          placeMarker(event.latLng);
+        });
+
+      } catch (err) {
+        console.error("Error initializing Google Map:", err);
+        initMockMap();
+      }
+    }
+
+    function placeMarker(latLng) {
+      const coords = { lat: latLng.lat(), lng: latLng.lng() };
+      updateSelectedLocation(coords);
+
+      if (marker) {
+        marker.setPosition(latLng);
+      } else {
+        marker = new google.maps.Marker({
+          position: latLng,
+          map: map,
+          draggable: true,
+          animation: google.maps.Animation.DROP
+        });
+
+        // Listen for marker drag events
+        marker.addListener('dragend', () => {
+          const newPos = marker.getPosition();
+          updateSelectedLocation({ lat: newPos.lat(), lng: newPos.lng() });
+        });
+      }
+    }
+
+    // ==========================================
+    // FALLBACK / MOCK MAP IMPLEMENTATION (For local testing without live API key)
+    // ==========================================
+    function initMockMap() {
+      document.getElementById('map').style.display = 'none';
+      const fallbackContainer = document.getElementById('map-fallback');
+      fallbackContainer.style.display = 'flex';
+
+      const fallbackMarker = document.getElementById('map-fallback-marker');
+
+      fallbackContainer.addEventListener('click', (event) => {
+        // Prevent click events triggering twice or on interior buttons
+        if (event.target !== fallbackContainer && !event.target.classList.contains('fallback-grid')) {
+          return;
+        }
+
+        const rect = fallbackContainer.getBoundingClientRect();
+        const clickX = event.clientX - rect.left;
+        const clickY = event.clientY - rect.top;
+
+        // Position mock marker visually
+        fallbackMarker.style.left = `${clickX}px`;
+        fallbackMarker.style.top = `${clickY}px`;
+        fallbackMarker.style.display = 'block';
+
+        // Translate click offsets to pseudo lat/lng centered around Khartoum
+        // This makes it act like a real map for Playwright/demo
+        const relativeX = (clickX - rect.width / 2) / (rect.width / 2);
+        const relativeY = (rect.height / 2 - clickY) / (rect.height / 2);
+
+        // Map relative offsets to slight lat/lng variations
+        const mockLat = Number((DEFAULT_LAT + relativeY * 0.05).toFixed(6));
+        const mockLng = Number((DEFAULT_LNG + relativeX * 0.05).toFixed(6));
+
+        updateSelectedLocation({ lat: mockLat, lng: mockLng });
+      });
+    }
+
+    function moveMockMarker(lat, lng) {
+      const fallbackContainer = document.getElementById('map-fallback');
+      const fallbackMarker = document.getElementById('map-fallback-marker');
+
+      if (fallbackContainer.style.display === 'flex') {
+        const rect = fallbackContainer.getBoundingClientRect();
+        // Calculate coordinate-to-pixel placement
+        const relativeX = (lng - DEFAULT_LNG) / 0.05;
+        const relativeY = (lat - DEFAULT_LAT) / 0.05;
+
+        const pixelX = (relativeX * (rect.width / 2)) + (rect.width / 2);
+        const pixelY = (rect.height / 2) - (relativeY * (rect.height / 2));
+
+        fallbackMarker.style.left = `${Math.max(10, Math.min(rect.width - 10, pixelX))}px`;
+        fallbackMarker.style.top = `${Math.max(10, Math.min(rect.height - 10, pixelY))}px`;
+        fallbackMarker.style.display = 'block';
+      }
+    }
+
+    // ==========================================
+    // CONTROLLER & UI FUNCTIONS
+    // ==========================================
+    function updateSelectedLocation(coords) {
+      selectedLocation = coords;
+      coordsDisplay.innerHTML = `Lat: <span>${coords.lat.toFixed(6)}</span>, Lng: <span>${coords.lng.toFixed(6)}</span>`;
+      btnConfirm.disabled = false;
+    }
+
+    // Geolocation API Action
+    btnGeolocation.addEventListener('click', () => {
+      btnGeolocation.disabled = true;
+      const originalText = btnGeolocation.innerHTML;
+      btnGeolocation.innerHTML = `
+        <div class="spinner" style="width: 16px; height: 16px; border-width: 2px; margin-bottom: 0; border-left-color: var(--primary-color);"></div>
+        Locating...
+      `;
+
+      if (!navigator.geolocation) {
+        showTemporaryErrorModal("Unsupported", "Geolocation is not supported by your browser.");
+        resetGeoBtn();
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          const userLatLng = { lat, lng };
+
+          updateSelectedLocation(userLatLng);
+
+          // Center real Google Map
+          if (map) {
+            const googleLatLng = new google.maps.LatLng(lat, lng);
+            map.setCenter(googleLatLng);
+            map.setZoom(16);
+            placeMarker(googleLatLng);
+          } else {
+            // Update mock marker position
+            moveMockMarker(lat, lng);
+          }
+
+          resetGeoBtn();
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+          let errMsg = "Unable to retrieve your location. Please select manually on the map.";
+          if (error.code === error.PERMISSION_DENIED) {
+            errMsg = "Location access was denied. Please enable location permissions in your browser or select manually.";
+          }
+          showTemporaryErrorModal("Location Access Issue", errMsg);
+          resetGeoBtn();
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      );
+
+      function resetGeoBtn() {
+        btnGeolocation.disabled = false;
+        btnGeolocation.innerHTML = originalText;
+      }
+    });
+
+    function showTemporaryErrorModal(title, msg) {
+      showModal(`
+        <div class="modal-icon modal-icon-warning">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+          </svg>
+        </div>
+        <div class="modal-title">${escapeHTML(title)}</div>
+        <div class="modal-message">${escapeHTML(msg)}</div>
+        <button class="btn btn-primary" onclick="hideModal()" style="margin-top: 10px;">Got it</button>
+      `);
+    }
+
+    // Confirm & Submit Location
+    btnConfirm.addEventListener('click', () => {
+      if (!selectedLocation) return;
+
+      // Show loading modal immediately
+      showModal(`
+        <div class="spinner"></div>
+        <div class="modal-title">Submitting Location...</div>
+        <div class="modal-message">Please wait while we confirm your delivery address pin.</div>
+      `);
+
+      // If missing linkId, we simulate successful submit (useful for testing frontend in standalone mode)
+      if (!linkId) {
+        setTimeout(() => {
+          showSuccessScreen();
+        }, 1200);
+        return;
+      }
+
+      const postUrl = `${API_BASE_URL}/location/${encodeURIComponent(linkId)}`;
+
+      fetch(postUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          latitude: selectedLocation.lat,
+          longitude: selectedLocation.lng
+        })
+      })
+      .then(response => {
+        if (response.status === 200) {
+          showSuccessScreen();
+        } else if (response.status === 410) {
+          showGoneScreen();
+        } else if (response.status === 404) {
+          showNotFoundScreen();
+        } else if (response.status === 400) {
+          showBadRequestScreen();
+        } else {
+          showGenericErrorScreen();
+        }
+      })
+      .catch(error => {
+        console.error("Submission fetch network error:", error);
+        showGenericErrorScreen();
+      });
+    });
+
+    // ==========================================
+    // RESPONSE STATE SCREENS
+    // ==========================================
+    function showSuccessScreen() {
+      showModal(`
+        <div class="modal-icon modal-icon-success">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+          </svg>
+        </div>
+        <div class="modal-title">Location Confirmed!</div>
+        <div class="modal-message">Your delivery address pin has been successfully updated. You can now safely close this browser window. Thank you!</div>
+      `);
+    }
+
+    function showGoneScreen() {
+      showModal(`
+        <div class="modal-icon modal-icon-error">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+          </svg>
+        </div>
+        <div class="modal-title">Link Expired</div>
+        <div class="modal-message">This link is no longer valid. Please contact the seller to get a new delivery location link.</div>
+      `);
+    }
+
+    function showNotFoundScreen() {
+      showModal(`
+        <div class="modal-icon modal-icon-error">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+          </svg>
+        </div>
+        <div class="modal-title">Invalid Link</div>
+        <div class="modal-message">This delivery link is invalid. Please double check the URL or request a new one from the seller.</div>
+      `);
+    }
+
+    function showBadRequestScreen() {
+      showModal(`
+        <div class="modal-icon modal-icon-warning">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+          </svg>
+        </div>
+        <div class="modal-title">Invalid Coordinates</div>
+        <div class="modal-message">The selected coordinates are invalid or out of bounds. Please place the pin again and retry.</div>
+        <button class="btn btn-primary" onclick="hideModal()" style="margin-top: 10px;">Try Again</button>
+      `);
+    }
+
+    function showGenericErrorScreen() {
+      showModal(`
+        <div class="modal-icon modal-icon-error">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+          </svg>
+        </div>
+        <div class="modal-title">Connection Error</div>
+        <div class="modal-message">We couldn't submit your location due to a network connection issue. Please check your internet connection and try again.</div>
+        <button class="btn btn-primary" onclick="hideModal()" style="margin-top: 10px;">Retry Submission</button>
+      `);
+    }
+
+    // ==========================================
+    // UTILITIES
+    // ==========================================
+    function showModal(htmlContent) {
+      modalContent.innerHTML = htmlContent;
+      statusModal.style.display = 'flex';
+    }
+
+    function hideModal() {
+      statusModal.style.display = 'none';
+    }
+
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g,
+        tag => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          "'": '&#39;',
+          '"': '&quot;'
+        }[tag] || tag)
+      );
+    }
+  </script>
+</body>
+</html>
