@@ -28,11 +28,12 @@ export class LocationCaptureService {
   /**
    * Generates a single-use expiring location link.
    * Each link is tied to one specific order and customer.
+   * Default expiry is 24 hours (1440 minutes).
    */
   public generateLocationLink(
     customerId: string,
     orderId: string,
-    expiresInMinutes: number = 15
+    expiresInMinutes: number = 1440
   ): { linkId: string; url: string; expiresAt: Date } {
     if (!customerId || typeof customerId !== 'string' || customerId.trim() === '') {
       throw new Error('Missing or invalid customerId.');
@@ -47,6 +48,15 @@ export class LocationCaptureService {
     // Check if the order is already marked complete. If so, throw/reject.
     if (this.store.isOrderComplete(orderId)) {
       throw new Error(`Cannot generate location link for already completed order: ${orderId}`);
+    }
+
+    // Auto-invalidate prior active links on new link generation for the same order
+    const existingLinks = this.store.getLinksForOrder(orderId);
+    const now = Date.now();
+    for (const exLink of existingLinks) {
+      if (!exLink.used && !exLink.invalidated && now <= exLink.expiresAt.getTime()) {
+        exLink.invalidated = true;
+      }
     }
 
     const linkId = generateUniqueId();
@@ -107,9 +117,15 @@ export class LocationCaptureService {
       throw err;
     }
 
-    if (link.invalidated || this.store.isOrderComplete(link.orderId)) {
+    if (this.store.isOrderComplete(link.orderId)) {
       link.invalidated = true; // Sync state
       const err = new Error('Link has been invalidated because the order is completed.');
+      (err as any).statusCode = 410;
+      throw err;
+    }
+
+    if (link.invalidated) {
+      const err = new Error('Link has been invalidated because a newer link was generated for this order.');
       (err as any).statusCode = 410;
       throw err;
     }

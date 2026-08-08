@@ -9,7 +9,8 @@ This module features zero assumptions about existing databases and stores all st
 ## Key Concepts
 
 ### 1. Link Lifecycle vs. Persistent Address
-- **Single-Use, Expiring Links:** Generated link records are tied strictly to an `orderId` and a `customerId`. They expire after a given duration (default: 15 minutes) or become invalid immediately once used (a pin is successfully submitted), or when the associated order is marked complete—whichever comes first.
+- **Single-Use, Expiring Links:** Generated link records are tied strictly to an `orderId` and a `customerId`. They expire after a given duration (default: 24 hours / 1440 minutes) or become invalid immediately once used (a pin is successfully submitted), when the associated order is marked complete, or when a newer link is generated for the same order—whichever comes first.
+- **Link Supersession:** Generating a new active link for an order auto-invalidates any previous, unused links for that same order immediately. This ensures only the most recently generated link for an order is active at any time.
 - **Persistent Address Storage:** The customer's actual GPS address record is decoupled from individual order link lifetimes. Once a customer successfully submits a pin, their persistent location profile is updated. When generating a link for a new order, you can prefill their coordinates using this persistent storage.
 - **Text-Address Fallback:** Marketers or administrators can set manual text-fallback addresses for a given order (e.g. "123 Main St, Apt 4B"). Setting this does *not* invalidate or update the customer's stored GPS pins, keeping future automated workflows safe.
 
@@ -44,11 +45,11 @@ The module exposes core interfaces, a storage class, a management service, and a
 The primary class managing state actions and business logic.
 
 #### `generateLocationLink(customerId: string, orderId: string, expiresInMinutes?: number)`
-Generates a secure, temporary location-capture link.
+Generates a secure, temporary location-capture link. Generating a new link for an order automatically invalidates any previously generated active links for the same order.
 - **Arguments:**
   - `customerId`: non-empty string.
   - `orderId`: non-empty string.
-  - `expiresInMinutes` (optional, default: `15`): lifetime of the link.
+  - `expiresInMinutes` (optional, default: `1440` (24 hours)): lifetime of the link in minutes.
 - **Returns:** `{ linkId: string, url: string, expiresAt: Date }`
 - **Throws:** Errors on invalid or empty IDs, or if the order is already marked complete.
 

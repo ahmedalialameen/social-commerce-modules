@@ -18,16 +18,47 @@ describe('Location Capture Module Tests', () => {
   });
 
   describe('Core Service Logic', () => {
-    test('successful link generation', () => {
+    test('successful link generation with default 24-hour expiry', () => {
       const customerId = 'cust-123';
       const orderId = 'order-456';
 
-      const result = service.generateLocationLink(customerId, orderId, 15);
+      const result = service.generateLocationLink(customerId, orderId);
 
       expect(result.linkId).toBeDefined();
       expect(typeof result.linkId).toBe('string');
       expect(result.url).toBe(`https://example.com/capture/${result.linkId}`);
-      expect(result.expiresAt.getTime()).toBeGreaterThan(Date.now());
+      // Check that it's close to 24 hours (1440 minutes)
+      const diffMs = result.expiresAt.getTime() - Date.now();
+      const diffMinutes = diffMs / (60 * 1000);
+      expect(diffMinutes).toBeGreaterThan(1439);
+      expect(diffMinutes).toBeLessThan(1441);
+    });
+
+    test('generating a second link for the same orderId invalidates the first link', () => {
+      const customerId = 'cust-123';
+      const orderId = 'order-dup';
+
+      // Generate first link
+      const link1 = service.generateLocationLink(customerId, orderId);
+
+      // Generate second link (same orderId)
+      const link2 = service.generateLocationLink(customerId, orderId);
+
+      // First link should be invalidated
+      expect(() => {
+        service.submitPin(link1.linkId, 12.345, 67.890);
+      }).toThrow('Link has been invalidated because a newer link was generated for this order.');
+
+      try {
+        service.submitPin(link1.linkId, 12.345, 67.890);
+      } catch (err: any) {
+        expect(err.statusCode).toBe(410);
+      }
+
+      // Second link should be completely valid and active
+      const submitResult = service.submitPin(link2.linkId, 12.345, 67.890);
+      expect(submitResult.customerId).toBe(customerId);
+      expect(submitResult.orderId).toBe(orderId);
     });
 
     test('rejection of invalid input on link generation', () => {
